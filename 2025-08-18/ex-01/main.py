@@ -1,3 +1,5 @@
+import string
+
 def open_file(file_path):
     try:
         with open(file_path, 'r') as file:
@@ -6,8 +8,12 @@ def open_file(file_path):
         print(f"Error: The file {file_path} does not exist.")
         return None
 
-def count_words(file_path):
-    pass
+def count_words(file):
+    # count number of words in a file, exclude punctuation
+    content = file
+    content = content.translate(str.maketrans("", "", string.punctuation))
+    words = content.split()
+    return len(words)
 
 def count_lines(file_path):
     pass
@@ -20,6 +26,9 @@ def main():
     if content:
         print("File content:")
         print(content)
+        
+        word_count = count_words(content)
+        print(f"Number of words: {word_count}")
         
 if __name__ == "__main__":
     main()
