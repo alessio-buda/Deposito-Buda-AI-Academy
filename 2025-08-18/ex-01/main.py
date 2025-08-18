@@ -43,8 +43,8 @@ def main():
         print(f"Number of lines: {line_count}")
         
         frequency = word_frequency(content)
-        print("Word frequency:") 
-        for word, count in frequency.items():
+        print("Word frequency (top-5):")
+        for word, count in sorted(frequency.items(), key=lambda x: x[1], reverse=True)[:5]:
             print(f"{word}: {count}")
 
 if __name__ == "__main__":
