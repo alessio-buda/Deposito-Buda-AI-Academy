@@ -19,8 +19,16 @@ def count_lines(file):
     # count number of lines in a file
     return len(file.splitlines())
 
-def  word_frequency(file_path):
-    pass
+def  word_frequency(file):
+    # count frequency of each word in a file
+    content = file
+    content = content.translate(str.maketrans("", "", string.punctuation))
+    content = content.lower()
+    words = content.split()
+    frequency = {}
+    for word in words:
+        frequency[word] = frequency.get(word, 0) + 1
+    return frequency
 
 def main():
     content = open_file("2025-08-18\ex-01\input.txt")
@@ -33,6 +41,11 @@ def main():
         
         line_count = count_lines(content)
         print(f"Number of lines: {line_count}")
+        
+        frequency = word_frequency(content)
+        print("Word frequency:") 
+        for word, count in frequency.items():
+            print(f"{word}: {count}")
 
 if __name__ == "__main__":
     main()
