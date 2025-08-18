@@ -15,8 +15,9 @@ def count_words(file):
     words = content.split()
     return len(words)
 
-def count_lines(file_path):
-    pass
+def count_lines(file):
+    # count number of lines in a file
+    return len(file.splitlines())
 
 def  word_frequency(file_path):
     pass
@@ -30,5 +31,8 @@ def main():
         word_count = count_words(content)
         print(f"Number of words: {word_count}")
         
+        line_count = count_lines(content)
+        print(f"Number of lines: {line_count}")
+
 if __name__ == "__main__":
     main()
