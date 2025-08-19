@@ -42,7 +42,7 @@ def main():
     
     plt.figure(figsize=(18, 10))
     plot_tree(decision_tree, feature_names=X.columns, class_names=['Low CO', 'High CO'], filled=True)
-    plt.title("Albero Decisionale - Dataset AEP")
+    plt.title("Decision Tree - Dataset AEP")
     plt.show()
     
     
