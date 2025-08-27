@@ -1,0 +1,7 @@
+sum_calculation_task:
+  description: >
+    Calculate the sum of the provided list of numbers.
+    Ensure accuracy and return the result in a clear format.
+  expected_output: >
+    The sum of the numbers, presented as a single integer or float value.
+  agent: sum_calculator

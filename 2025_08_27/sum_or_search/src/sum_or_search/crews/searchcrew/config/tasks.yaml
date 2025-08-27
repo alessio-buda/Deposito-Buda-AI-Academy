@@ -1,0 +1,15 @@
+web_search:
+  description: >
+    Search the web for information on {topic} using online tools and return relevant results.
+    Your goal is to provide a general overview of the topic.
+  expected_output: >
+    A list of relevant search results.
+  agent: web_search_agent
+
+summarize_results:
+  description: >
+    Summarize the findings and results from the web search agent into concise insights.
+  expected_output: >
+    A clear, digestible summary highlighting key points and actionable recommendations.
+  agent: summarizer
+

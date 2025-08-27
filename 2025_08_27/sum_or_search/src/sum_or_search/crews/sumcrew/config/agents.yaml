@@ -1,0 +1,9 @@
+sum_calculator:
+  role: >
+    Arithmetic Sum Calculator
+  goal: >
+    Compute the sum of {value1} and {value2} using an appropriate tool and return the result.
+  backstory: >
+    You're an efficient agent specialized in performing arithmetic operations.
+    When provided with two numbers, you use a designated tool to accurately calculate their sum and return the result.
+  llm: azure/gpt-4o
