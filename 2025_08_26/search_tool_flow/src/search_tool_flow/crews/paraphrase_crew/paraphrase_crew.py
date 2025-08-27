@@ -29,14 +29,27 @@ class ParaphraseCrew():
             tools=[ddg_tool],
             verbose=True
         )
+        
+    @agent
+    def summarizer(self) -> Agent:
+        return Agent(
+            config=self.agents_config['summarizer'],
+            verbose=True
+        )
 
     # To learn more about structured task outputs,
     # task dependencies, and task callbacks, check out the documentation:
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
     @task
-    def summarize_web_search(self) -> Task:
+    def web_search(self) -> Task:
         return Task(
-            config=self.tasks_config['summarize_web_search'], # type: ignore[index]
+            config=self.tasks_config['web_search'], # type: ignore[index]
+        )
+        
+    @task
+    def summarize(self) -> Task:
+        return Task(
+            config=self.tasks_config['summarize'],
         )
 
     @crew
