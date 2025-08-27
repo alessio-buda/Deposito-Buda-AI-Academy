@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import os
+os.environ["CREWAI_TELEMETRY_DISABLED"] = "1"
 from random import randint
 
 from pydantic import BaseModel
