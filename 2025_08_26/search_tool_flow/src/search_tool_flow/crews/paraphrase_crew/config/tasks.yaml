@@ -1,0 +1,7 @@
+summarize_web_search:
+  description: >
+    Search the internet for the topic provided by the user and return a concise summary of the top 3 results.
+  expected_output: >
+    A clear and concise summary synthesizing the key information from the top 3 web search results about the given topic.
+  agent: web_searcher
+
