@@ -103,13 +103,18 @@ class RAGSearchFlow(Flow[RAGSearchState]):
         
         return self.state.result
 
-    @listen("web")
+    @listen(or_("web", query_RAG))
     def query_web(self):
-        self.state.result = SearchCrew().crew().kickoff(
+        result = SearchCrew().crew().kickoff(
             inputs={
                 "request": self.state.request
             }
         )
+        
+        if self.state.tool == "rag":
+            self.state.result = result + "\n\n" + self.state.result.raw
+        else:
+            self.state.result = result
         
         return self.state.result
         
@@ -122,7 +127,7 @@ class RAGSearchFlow(Flow[RAGSearchState]):
             }
         )
         
-    @listen(or_(query_RAG, query_web))
+    @listen(query_web)
     def explain(self):
         
         result = Teachercrew().crew().kickoff(
