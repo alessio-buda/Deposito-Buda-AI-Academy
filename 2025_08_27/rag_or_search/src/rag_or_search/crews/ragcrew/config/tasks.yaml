@@ -1,0 +1,15 @@
+rag_search_task:
+  description: >
+    Use RAG tools to search and retrieve the most relevant documents and information about the following user query: '{topic}''.
+    Ensure the sources are up-to-date and valuable for further analysis.
+  expected_output: >
+    A curated list of highly relevant documents or information snippets about {topic}, including source references.
+  agent: rag_searcher
+
+rag_response_task:
+  description: >
+    Review the retrieved documents and synthesize a clear, accurate, and actionable response to the user’s query about {topic},
+    using only the provided sources.
+  expected_output: >
+    A concise, well-structured answer to the user’s query, referencing the supporting documents.
+  agent: rag_responder
