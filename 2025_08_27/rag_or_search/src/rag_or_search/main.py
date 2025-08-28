@@ -6,16 +6,18 @@ from random import randint
 from pydantic import BaseModel
 from crewai import LLM
 
-from crewai.flow import Flow, listen, start, router
+from crewai.flow import Flow, listen, start, router, or_
 
 from src.rag_or_search.crews.searchcrew.searchcrew import SearchCrew
 from src.rag_or_search.crews.ragcrew.ragcrew import Ragcrew
 from src.rag_or_search.crews.mathcrew.mathcrew import Mathcrew
+from src.rag_or_search.crews.teachercrew.teachercrew import Teachercrew
 
 
 class RAGSearchState(BaseModel):
     request: str = "" 
     tool: str = ""  # "RAG" or "web"
+    result: str = ""
 
 
 class RAGSearchFlow(Flow[RAGSearchState]):
@@ -72,6 +74,8 @@ class RAGSearchFlow(Flow[RAGSearchState]):
         
         self.state.tool = llm.call(messages=messages)
         
+        print("*"*10 + self.state.tool + "*"*10)
+        
         return self.state.request
 
     @router(get_user_request)
@@ -91,19 +95,23 @@ class RAGSearchFlow(Flow[RAGSearchState]):
     def query_RAG(self):
         print(f"Using RAG to search for topic: '{self.state.request}'")
 
-        result = Ragcrew().crew().kickoff(
+        self.state.result = Ragcrew().crew().kickoff(
             inputs={
                 "request": self.state.request
             }
         )
+        
+        return self.state.result
 
     @listen("web")
     def query_web(self):
-        result = SearchCrew().crew().kickoff(
+        self.state.result = SearchCrew().crew().kickoff(
             inputs={
                 "request": self.state.request
             }
         )
+        
+        return self.state.result
         
     @listen("math")
     def query_math(self):
@@ -111,6 +119,16 @@ class RAGSearchFlow(Flow[RAGSearchState]):
         result = Mathcrew().crew().kickoff(
             inputs={
                 "question": self.state.request
+            }
+        )
+        
+    @listen(or_(query_RAG, query_web))
+    def explain(self):
+        
+        result = Teachercrew().crew().kickoff(
+            inputs={
+                "request": self.state.request,
+                "info": self.state.result.raw
             }
         )
             
