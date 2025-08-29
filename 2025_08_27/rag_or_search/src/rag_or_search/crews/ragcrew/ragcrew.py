@@ -1,3 +1,5 @@
+"""Crew definition for a RAG-oriented workflow."""
+
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -9,7 +11,7 @@ from src.rag_or_search.tools.rag import RagTool
 
 @CrewBase
 class Ragcrew():
-    """Ragcrew crew"""
+    """Crew that retrieves contexts via RAG and composes a response."""
 
     agents: List[BaseAgent]
     tasks: List[Task]
@@ -22,6 +24,7 @@ class Ragcrew():
     # https://docs.crewai.com/concepts/agents#agent-tools
     @agent
     def rag_searcher(self) -> Agent:
+        """Agent that performs retrieval using ``RagTool``."""
         return Agent(
             config=self.agents_config['rag_searcher'], # type: ignore[index]
             verbose=True,
@@ -30,6 +33,7 @@ class Ragcrew():
 
     @agent
     def rag_responder(self) -> Agent:
+        """Agent that drafts a grounded response based on retrieved contexts."""
         return Agent(
             config=self.agents_config['rag_responder'], # type: ignore[index]
             verbose=True
@@ -40,12 +44,14 @@ class Ragcrew():
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
     @task
     def rag_search_task(self) -> Task:
+        """Task that retrieves relevant contexts from the corpus."""
         return Task(
             config=self.tasks_config['rag_search_task'], # type: ignore[index]
         )
 
     @task
     def rag_response_task(self) -> Task:
+        """Task that synthesizes an answer grounded in retrieved contexts."""
         return Task(
             config=self.tasks_config['rag_response_task'], # type: ignore[index]
             output_file='report.md'
@@ -53,7 +59,7 @@ class Ragcrew():
 
     @crew
     def crew(self) -> Crew:
-        """Creates the Ragcrew crew"""
+        """Create and return the RAG-oriented crew."""
         # To learn how to add knowledge sources to your crew, check out the documentation:
         # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
 

@@ -1,7 +1,18 @@
 #!/usr/bin/env python
+"""RAG-or-Search flow entrypoint.
+
+This module defines a CrewAI Flow that routes a user request to one of three
+tools: a RAG pipeline, a web search pipeline, or a math pipeline. The flow
+validates the input for safety, classifies the request, runs the appropriate
+branch, and can produce an explanation.
+
+Notes
+-----
+- Interactive: prompts the user for input when run as a script.
+- Requires Azure OpenAI configuration via environment variables.
+"""
 import os
 os.environ["CREWAI_TELEMETRY_DISABLED"] = "1"
-from random import randint
 
 from pydantic import BaseModel
 from crewai import LLM
@@ -15,15 +26,42 @@ from src.rag_or_search.crews.teachercrew.teachercrew import Teachercrew
 
 
 class RAGSearchState(BaseModel):
+    """Shared state for the RAG-or-Search flow.
+
+    Attributes
+    ----------
+    request : str
+        The user-provided query or problem statement.
+    tool : str
+        The selected tool label, one of {"RAG", "web", "math"}.
+    result : str
+        The aggregated result string produced by the executed branch.
+    """
+
     request: str = "" 
     tool: str = ""  # "RAG" or "web"
     result: str = ""
 
 
 class RAGSearchFlow(Flow[RAGSearchState]):
+    """Flow that validates, classifies, routes, and explains a user request.
+
+    The flow performs the following steps:
+    1. Collect a request and validate it for safety.
+    2. Classify the request into one of RAG, web, or math.
+    3. Execute the selected branch.
+    4. When RAG or web is selected, explain the result using a teaching agent.
+    """
 
     @start()
     def get_user_request(self):
+        """Prompt the user, validate for safety, and classify the request.
+
+        Returns
+        -------
+        str
+            The validated user request text.
+        """
         
         llm = LLM(model="azure/gpt-4o")
         
@@ -80,6 +118,13 @@ class RAGSearchFlow(Flow[RAGSearchState]):
 
     @router(get_user_request)
     def select_tool(self):
+        """Return the next step label based on the classification.
+
+        Returns
+        -------
+        str
+            One of {"RAG", "web", "math"} which controls the next node.
+        """
         
         if self.state.tool == "RAG":
             print("RAG selected to answer your query")
@@ -93,6 +138,13 @@ class RAGSearchFlow(Flow[RAGSearchState]):
 
     @listen("RAG")
     def query_RAG(self):
+        """Execute the RAG pipeline branch.
+
+        Returns
+        -------
+        CrewOutput
+            The raw result from the RAG crew kickoff.
+        """
         print(f"Using RAG to search for topic: '{self.state.request}'")
 
         self.state.result = Ragcrew().crew().kickoff(
@@ -105,13 +157,21 @@ class RAGSearchFlow(Flow[RAGSearchState]):
 
     @listen(or_("web", query_RAG))
     def query_web(self):
+        """Execute the web search branch and merge results when RAG has been previously run.
+
+        Returns
+        -------
+        CrewOutput
+            The result from the web search crew kickoff; may be concatenated
+            with the RAG result if both were run.
+        """
         result = SearchCrew().crew().kickoff(
             inputs={
                 "request": self.state.request
             }
         )
         
-        if self.state.tool == "rag":
+        if self.state.tool == "RAG":
             self.state.result = result + "\n\n" + self.state.result.raw
         else:
             self.state.result = result
@@ -120,8 +180,15 @@ class RAGSearchFlow(Flow[RAGSearchState]):
         
     @listen("math")
     def query_math(self):
+        """Execute the math branch.
 
-        result = Mathcrew().crew().kickoff(
+        Notes
+        -----
+        The result of this branch is produced by the math crew. If needed, you
+        can store or transform it in ``self.state.result``.
+        """
+
+        _ = Mathcrew().crew().kickoff(
             inputs={
                 "question": self.state.request
             }
@@ -129,8 +196,12 @@ class RAGSearchFlow(Flow[RAGSearchState]):
         
     @listen(query_web)
     def explain(self):
+        """Run an explanatory step using a teaching agent.
+
+        Uses the original request and the aggregated result as inputs.
+        """
         
-        result = Teachercrew().crew().kickoff(
+        _ = Teachercrew().crew().kickoff(
             inputs={
                 "request": self.state.request,
                 "info": self.state.result.raw
@@ -138,11 +209,13 @@ class RAGSearchFlow(Flow[RAGSearchState]):
         )
             
 def kickoff():
+    """Kick off the interactive RAG-or-Search flow."""
     poem_flow = RAGSearchFlow()
     poem_flow.kickoff()
 
 
 def plot():
+    """Render and open an interactive diagram of the flow."""
     poem_flow = RAGSearchFlow()
     poem_flow.plot()
 

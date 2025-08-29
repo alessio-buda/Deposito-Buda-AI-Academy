@@ -1,3 +1,5 @@
+"""Crew definition for a web search and summarization workflow."""
+
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -9,7 +11,7 @@ from src.rag_or_search.tools.search import SearchTool
 
 @CrewBase
 class SearchCrew():
-    """SearchCrew crew"""
+    """Crew that searches the web and summarizes the results."""
 
     agents: List[BaseAgent]
     tasks: List[Task]
@@ -22,6 +24,7 @@ class SearchCrew():
     # https://docs.crewai.com/concepts/agents#agent-tools
     @agent
     def web_search_agent(self) -> Agent:
+        """Agent that queries DuckDuckGo for relevant pages."""
         search_tool = SearchTool()
         
         return Agent(
@@ -32,6 +35,7 @@ class SearchCrew():
 
     @agent
     def summarizer(self) -> Agent:
+        """Agent that condenses search results into a concise summary."""
         return Agent(
             config=self.agents_config['summarizer'], # type: ignore[index]
             verbose=True
@@ -42,12 +46,14 @@ class SearchCrew():
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
     @task
     def web_search(self) -> Task:
+        """Task that gathers the top search results for a topic."""
         return Task(
             config=self.tasks_config['web_search'], # type: ignore[index]
         )
 
     @task
     def summarize_results(self) -> Task:
+        """Task that writes a brief summary of the search findings."""
         return Task(
             config=self.tasks_config['summarize_results'], # type: ignore[index]
             output_file='report.md'
@@ -55,7 +61,7 @@ class SearchCrew():
 
     @crew
     def crew(self) -> Crew:
-        """Creates the Searchcrew crew"""
+        """Create and return the web-search crew."""
         # To learn how to add knowledge sources to your crew, check out the documentation:
         # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
 

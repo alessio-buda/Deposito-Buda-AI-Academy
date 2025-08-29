@@ -1,5 +1,23 @@
 from __future__ import annotations
 
+"""Utility functions for building and querying a simple RAG pipeline.
+
+This module centralizes helpers to:
+
+- Initialize embeddings and a chat model (Azure OpenAI compatible)
+- Load or simulate documents
+- Split documents into chunks
+- Build or load a FAISS vector store
+- Configure a retriever and format contexts for prompts
+- Execute basic RAG retrieval flows
+
+Notes
+-----
+These utilities expect Azure OpenAI environment variables to be configured
+(``AZURE_API_BASE``, ``AZURE_API_KEY``, ``AZURE_API_VERSION``, and an embedding
+deployment). When running locally, secrets may be prompted via ``getpass``.
+"""
+
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +42,28 @@ load_dotenv()
 
 @dataclass
 class Settings:
+    """Configuration values for RAG utilities.
+
+    Attributes
+    ----------
+    persist_dir : str
+        Directory where the FAISS index is stored.
+    chunk_size : int
+        Maximum characters per chunk during splitting.
+    chunk_overlap : int
+        Overlap between adjacent chunks to preserve context.
+    search_type : str
+        Retrieval mode, ``"mmr"`` or ``"similarity"``.
+    k : int
+        Number of final retrieved documents.
+    fetch_k : int
+        Initial candidate pool size for MMR.
+    mmr_lambda : float
+        Trade-off for MMR, 0=max diversity, 1=max relevance.
+    lmstudio_model_env : str
+        Environment variable name holding the Azure OpenAI deployment name.
+    """
+
     # Persistenza FAISS
     persist_dir: str = "faiss_index_example"
     # Text splitting
@@ -47,6 +87,15 @@ SETTINGS = Settings()
 # =========================
 
 def get_embeddings():
+    """Initialize Azure OpenAI embeddings client.
+
+    Prompts for a key if ``AZURE_API_KEY`` is not set.
+
+    Returns
+    -------
+    AzureOpenAIEmbeddings
+        Configured embeddings instance.
+    """
 
     if not os.getenv("AZURE_API_KEY"):
         os.environ["AZURE_API_KEY"] = getpass.getpass(
@@ -62,12 +111,17 @@ def get_embeddings():
 
 
 def get_llm_from_lmstudio(settings: Settings):
-    """
-    Inizializza un ChatModel puntando a LM Studio (OpenAI-compatible).
-    Richiede:
-      - OPENAI_BASE_URL (es. http://localhost:1234/v1)
-      - OPENAI_API_KEY (placeholder qualsiasi, es. "not-needed")
-      - LMSTUDIO_MODEL (nome del modello caricato in LM Studio)
+    """Initialize a chat model pointing to Azure OpenAI.
+
+    Parameters
+    ----------
+    settings : Settings
+        The settings object providing the model deployment env var.
+
+    Returns
+    -------
+    Any
+        A chat model instance compatible with LangChain interfaces.
     """
     base_url = os.getenv("AZURE_API_BASE")
     api_key = os.getenv("AZURE_API_KEY")
@@ -86,14 +140,47 @@ def get_llm_from_lmstudio(settings: Settings):
     return init_chat_model(model_name, model_provider="azure_openai", api_key=api_key, api_version=api_version)
 
 def load_documents(file_format, file_path):
+    """Load documents from disk by format.
+
+    Parameters
+    ----------
+    file_format : str
+        Short format specifier, currently only ``"md"`` supported.
+    file_path : str
+        Path to the file.
+
+    Returns
+    -------
+    list of Document
+        Parsed documents.
+
+    Raises
+    ------
+    ValueError
+        If an unsupported format is requested.
+    """
     if file_format == "md":
         return load_md_documents(file_path)
     else:
         raise ValueError(f"Unsupported file format: {file_format}")
     
 def load_md_documents(file_path: str) -> List[Document]:
-    """
-    Legge un file Markdown e restituisce una lista di Document (uno per ogni sezione separata da titoli).
+    """Read a Markdown file into LangChain ``Document`` objects.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the Markdown file.
+
+    Returns
+    -------
+    list of Document
+        One document per section, split on "---".
+
+    Raises
+    ------
+    FileNotFoundError
+        If the path does not exist.
     """
     documents = []
     if not os.path.isfile(file_path):
@@ -115,9 +202,7 @@ def load_md_documents(file_path: str) -> List[Document]:
     
 
 def simulate_corpus() -> List[Document]:
-    """
-    Crea un piccolo corpus di documenti in inglese con metadati e 'source' per citazioni.
-    """
+    """Create a small English corpus with metadata and ``source`` for citations."""
     docs = [
         Document(
             page_content=(
@@ -161,8 +246,19 @@ def simulate_corpus() -> List[Document]:
 
 
 def split_documents(docs: List[Document], settings: Settings) -> List[Document]:
-    """
-    Applica uno splitting robusto ai documenti per ottimizzare il retrieval.
+    """Apply robust splitting to optimize retrieval.
+
+    Parameters
+    ----------
+    docs : list of Document
+        Input documents to split.
+    settings : Settings
+        Chunking configuration.
+
+    Returns
+    -------
+    list of Document
+        The resulting chunks.
     """
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.chunk_size,
@@ -176,8 +272,21 @@ def split_documents(docs: List[Document], settings: Settings) -> List[Document]:
 
 
 def build_faiss_vectorstore(chunks: List[Document], embeddings, persist_dir: str) -> FAISS:
-    """
-    Costruisce da zero un FAISS index (IndexFlatL2) e lo salva su disco.
+    """Build and persist a FAISS index from document chunks.
+
+    Parameters
+    ----------
+    chunks : list of Document
+        Documents to index.
+    embeddings : Any
+        Embeddings model used by FAISS.
+    persist_dir : str
+        Directory to persist the index.
+
+    Returns
+    -------
+    FAISS
+        The created vector store instance.
     """
     # Determina la dimensione dell'embedding
     vs = FAISS.from_documents(
@@ -191,8 +300,21 @@ def build_faiss_vectorstore(chunks: List[Document], embeddings, persist_dir: str
 
 
 def load_or_build_vectorstore(settings: Settings, embeddings, docs: List[Document]) -> FAISS:
-    """
-    Tenta il load di un indice FAISS persistente; se non esiste, lo costruisce e lo salva.
+    """Load a persisted FAISS index or build one from documents.
+
+    Parameters
+    ----------
+    settings : Settings
+        Configuration including ``persist_dir``.
+    embeddings : Any
+        Embeddings model for FAISS.
+    docs : list of Document
+        Documents from which to build the index if missing.
+
+    Returns
+    -------
+    FAISS
+        Loaded or newly built vector store.
     """
     persist_path = Path(settings.persist_dir)
     index_file = persist_path / "index.faiss"
@@ -211,8 +333,19 @@ def load_or_build_vectorstore(settings: Settings, embeddings, docs: List[Documen
 
 
 def make_retriever(vector_store: FAISS, settings: Settings):
-    """
-    Configura il retriever. Con 'mmr' otteniamo risultati meno ridondanti e più coprenti.
+    """Configure a retriever, optionally using MMR for diversity.
+
+    Parameters
+    ----------
+    vector_store : FAISS
+        The vector store to wrap as a retriever.
+    settings : Settings
+        Retrieval configuration.
+
+    Returns
+    -------
+    Any
+        A retriever object compatible with LangChain.
     """
     if settings.search_type == "mmr":
         return vector_store.as_retriever(
@@ -227,9 +360,7 @@ def make_retriever(vector_store: FAISS, settings: Settings):
 
 
 def format_docs_for_prompt(docs: List[Document]) -> str:
-    """
-    Prepara il contesto per il prompt, includendo citazioni [source].
-    """
+    """Prepare a prompt context string with ``[source:...]`` citations."""
     lines = []
     for i, d in enumerate(docs, start=1):
         src = d.metadata.get("source", f"doc{i}")
@@ -238,17 +369,57 @@ def format_docs_for_prompt(docs: List[Document]) -> str:
 
 
 def rag_answer(question: str, chain) -> str:
-    """
-    Esegue la catena RAG per una singola domanda.
+    """Execute a RAG chain for a single question.
+
+    Parameters
+    ----------
+    question : str
+        The user query.
+    chain : Any
+        A LangChain chain or runnable supporting ``invoke``.
+
+    Returns
+    -------
+    str
+        The generated answer text.
     """
     return chain.invoke(question)
 
 def get_contexts_for_question(retriever, question: str, k: int) -> List[str]:
-    """Ritorna i testi dei top-k documenti (chunk) usati come contesto."""
+    """Return the contents of the top-k retrieved chunks.
+
+    Parameters
+    ----------
+    retriever : Any
+        The retriever to query.
+    question : str
+        Query text.
+    k : int
+        Number of contexts to return.
+
+    Returns
+    -------
+    dict
+        Mapping from ``source`` to ``page_content``.
+    """
     docs = docs = retriever.invoke(question)[:k]
     return {d.metadata.get("source", f"doc{d.id}") : d.page_content for d in docs}
 
 def rag_search(question: str, k: int):
+    """Perform a simple RAG retrieval flow and return contexts.
+
+    Parameters
+    ----------
+    question : str
+        The user query.
+    k : int
+        Number of contexts to retrieve.
+
+    Returns
+    -------
+    dict
+        Mapping from ``source`` to ``page_content`` of retrieved chunks.
+    """
     settings = SETTINGS
     
     settings.k = k  # aggiorna k dinamicamente

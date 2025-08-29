@@ -1,3 +1,9 @@
+"""Crew definition for handling math-related queries.
+
+Defines agents and tasks to translate math problems to code and execute them
+with an interpreter tool.
+"""
+
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -9,7 +15,7 @@ from crewai_tools import CodeInterpreterTool
 
 @CrewBase
 class Mathcrew():
-    """Mathcrew crew"""
+    """Crew that translates math problems to executable code and runs it."""
 
     agents: List[BaseAgent]
     tasks: List[Task]
@@ -22,6 +28,7 @@ class Mathcrew():
     # https://docs.crewai.com/concepts/agents#agent-tools
     @agent
     def math_translator(self) -> Agent:
+        """Agent that rewrites natural language math problems into formal math."""
         return Agent(
             config=self.agents_config['math_translator'], # type: ignore[index]
             verbose=True
@@ -29,6 +36,7 @@ class Mathcrew():
 
     @agent
     def math_to_code_translator(self) -> Agent:
+        """Agent that converts math expressions into runnable code."""
         return Agent(
             config=self.agents_config['math_to_code_translator'], # type: ignore[index]
             verbose=True
@@ -36,6 +44,7 @@ class Mathcrew():
         
     @agent
     def math_executor(self) -> Agent:
+        """Agent that executes generated code using a code interpreter tool."""
         return Agent(
             config=self.agents_config['math_executor'], # type: ignore[index]
             verbose=True,
@@ -47,25 +56,28 @@ class Mathcrew():
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
     @task
     def math_translation_task(self) -> Task:
+        """Task that produces a formal math representation from a problem statement."""
         return Task(
             config=self.tasks_config['math_translation_task'], # type: ignore[index]
         )
 
     @task
     def math_to_code_task(self) -> Task:
+        """Task that generates code implementing the translated math."""
         return Task(
             config=self.tasks_config['math_to_code_task'], # type: ignore[index]
         )
         
     @task
     def math_execution_task(self) -> Task:
+        """Task that executes the generated code and returns the result."""
         return Task(
             config=self.tasks_config['math_execution_task'], # type: ignore[index]
         )
 
     @crew
     def crew(self) -> Crew:
-        """Creates the Mathcrew crew"""
+        """Create and return the math-oriented crew."""
         # To learn how to add knowledge sources to your crew, check out the documentation:
         # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
 

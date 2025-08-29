@@ -1,3 +1,5 @@
+"""Crew definition for generating outlines and explanatory documents."""
+
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -8,7 +10,7 @@ from typing import List
 
 @CrewBase
 class Teachercrew():
-    """Teachercrew crew"""
+    """Crew that outlines topics and writes explanatory documents."""
 
     agents: List[BaseAgent]
     tasks: List[Task]
@@ -21,6 +23,7 @@ class Teachercrew():
     # https://docs.crewai.com/concepts/agents#agent-tools
     @agent
     def outline_generator(self) -> Agent:
+        """Agent that creates a structured outline for the topic."""
         return Agent(
             config=self.agents_config['outline_generator'], # type: ignore[index]
             verbose=True
@@ -28,6 +31,7 @@ class Teachercrew():
 
     @agent
     def document_writer(self) -> Agent:
+        """Agent that drafts an explanatory document from the outline."""
         return Agent(
             config=self.agents_config['document_writer'], # type: ignore[index]
             verbose=True
@@ -38,12 +42,14 @@ class Teachercrew():
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
     @task
     def outline_task(self) -> Task:
+        """Task that produces an outline for the requested topic."""
         return Task(
             config=self.tasks_config['outline_task'], # type: ignore[index]
         )
 
     @task
     def writing_task(self) -> Task:
+        """Task that writes an explanatory document based on the outline."""
         return Task(
             config=self.tasks_config['writing_task'], # type: ignore[index]
             output_file='report.md'
@@ -51,7 +57,7 @@ class Teachercrew():
 
     @crew
     def crew(self) -> Crew:
-        """Creates the Teachercrew crew"""
+        """Create and return the teacher-oriented crew."""
         # To learn how to add knowledge sources to your crew, check out the documentation:
         # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
 
